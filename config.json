@@ -1,0 +1,85 @@
+{
+  "monitor": 1,
+  "hotkeys": {
+    "start_stop": "f8",
+    "quit": "f9"
+  },
+  "timings": {
+    "cast_hold_seconds": 0.35,
+    "wait_after_cast_seconds": 1.0,
+    "shake_scan_timeout_seconds": 12.0,
+    "reel_timeout_seconds": 30.0,
+    "loop_cooldown_seconds": 1.2,
+    "reel_tick_seconds": 0.015
+  },
+
+  "cast": {
+    "comment": "Where to click to throw the rod. Usually the center of the screen. Values are 0..1 fractions of the screen.",
+    "click_x_frac": 0.5,
+    "click_y_frac": 0.6
+  },
+
+  "shake": {
+    "comment": "Region (0..1 fractions) scanned for the white 'Shake!' prompt/button. The macro clicks the brightest matching blob it finds.",
+    "region": { "x": 0.20, "y": 0.20, "w": 0.60, "h": 0.60 },
+    "hsv_lower": [0, 0, 200],
+    "hsv_upper": [180, 60, 255],
+    "min_blob_area": 350,
+    "click_settle_seconds": 0.05
+  },
+
+  "reel": {
+    "comment": "Reeling minigame. 'region' is the whole bar. We track the moving target zone (fish) and the player control marker, then hold/release left-click to keep them aligned.",
+    "region": { "x": 0.30, "y": 0.78, "w": 0.40, "h": 0.06 },
+
+    "target_hsv_lower": [15, 80, 120],
+    "target_hsv_upper": [40, 255, 255],
+
+    "control_hsv_lower": [0, 0, 210],
+    "control_hsv_upper": [180, 40, 255],
+
+    "progress": {
+      "comment": "Optional: a region that turns bright/green as the catch completes. When it is 'full' we stop reeling.",
+      "region": { "x": 0.30, "y": 0.72, "w": 0.40, "h": 0.02 },
+      "hsv_lower": [40, 80, 120],
+      "hsv_upper": [90, 255, 255],
+      "full_fraction": 0.85,
+      "enabled": false
+    },
+
+    "deadzone_frac": 0.04,
+    "hold_bias": 0.5
+  },
+
+  "catch": {
+    "comment": "After a fish is landed, screenshot this region (the caught-fish popup) and let the Hugging Face 'brain' decide if it is a good catch. If good, press favorite_key to keep it.",
+    "region": { "x": 0.33, "y": 0.30, "w": 0.34, "h": 0.40 },
+    "favorite_key": "f",
+    "act_on_good": true,
+    "act_after_seconds": 0.4
+  },
+
+  "huggingface": {
+    "comment": "Cloud AI brain (no local GPU needed). Get a free token at https://huggingface.co/settings/tokens and paste it below, OR set the HF_API_TOKEN environment variable. Leave enabled=false to skip and just keep every catch.",
+    "enabled": false,
+    "api_token": "",
+    "task": "zero-shot-image-classification",
+    "model": "openai/clip-vit-large-patch14",
+    "endpoint": "https://api-inference.huggingface.co/models/",
+    "timeout_seconds": 15,
+    "candidate_labels": [
+      "a rare or legendary shiny fish",
+      "a common ordinary fish",
+      "junk trash or an old boot"
+    ],
+    "good_labels": [
+      "a rare or legendary shiny fish"
+    ],
+    "min_confidence": 0.45
+  },
+
+  "debug": {
+    "save_frames": false,
+    "print_state": true
+  }
+}

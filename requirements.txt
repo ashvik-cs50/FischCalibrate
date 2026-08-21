@@ -1,0 +1,18 @@
+# Fisch AI Macro - dependencies (Windows + macOS)
+# Core vision + capture (the "forever free" local AI engine)
+numpy>=1.24
+opencv-python>=4.8
+mss>=9.0
+
+# Cross-platform input
+pyautogui>=0.9.54
+pynput>=1.7.6
+
+# Cloud AI brain (Hugging Face Inference API) for good-catch detection
+requests>=2.31
+
+# Windows-only game-safe input (installed automatically only on Windows)
+pydirectinput>=1.0.4 ; platform_system == "Windows"
+
+# Build-only (needed to produce the .exe / .app; the build scripts install it):
+#   pip install pyinstaller
