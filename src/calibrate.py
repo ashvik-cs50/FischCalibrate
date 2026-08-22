@@ -86,7 +86,20 @@ def pick_region(cfg: dict) -> None:
         }
         print(f"  {dotted} = {region}")
         _assign(cfg, dotted, region)
+        _show_region_saved(dotted, region)
     save_cfg(cfg)
+
+
+def _show_region_saved(name: str, region: dict) -> None:
+    """Brief popup confirming the region was saved (useful when no console)."""
+    msg = np.zeros((90, 420, 3), dtype=np.uint8)
+    cv2.putText(msg, f"Saved: {name}", (10, 28),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 255, 180), 1, cv2.LINE_AA)
+    cv2.putText(msg, f"x={region['x']}  y={region['y']}  w={region['w']}  h={region['h']}",
+                (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
+    cv2.imshow("Saved", msg)
+    cv2.waitKey(900)
+    cv2.destroyAllWindows()
 
 
 def _sample_one(disp, hsv, title: str):
@@ -97,6 +110,8 @@ def _sample_one(disp, hsv, title: str):
     def on_mouse(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             samples.append(hsv[y, x].tolist())
+            # Visual feedback on the image itself (matters when there is no console)
+            cv2.circle(disp, (x, y), 3, (0, 255, 0), -1)
             print(f"  sampled HSV={hsv[y, x].tolist()} (total {len(samples)})")
 
     win = f"{title} — click the color, press Q when done (ESC to skip)"
@@ -118,7 +133,26 @@ def _sample_one(disp, hsv, title: str):
     arr = np.array(samples)
     lo = np.clip(arr.min(axis=0) - [10, 60, 60], [0, 0, 0], [180, 255, 255])
     hi = np.clip(arr.max(axis=0) + [10, 60, 60], [0, 0, 0], [180, 255, 255])
+    # Show a small summary window so the user can confirm the result (useful
+    # when running as a windowless .app with no console).
+    _show_summary(title, len(samples), lo, hi)
     return lo.astype(int).tolist(), hi.astype(int).tolist()
+
+
+def _show_summary(title: str, n: int, lo, hi) -> None:
+    """Brief popup that shows the sampled range so the user knows it worked."""
+    msg = np.zeros((110, 420, 3), dtype=np.uint8)
+    cv2.putText(msg, title[:38], (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(msg, f"Samples: {n}", (10, 55),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
+    cv2.putText(msg, f"lo={lo.tolist()}", (10, 80),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 255, 180), 1, cv2.LINE_AA)
+    cv2.putText(msg, f"hi={hi.tolist()}", (210, 80),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 255, 180), 1, cv2.LINE_AA)
+    cv2.imshow("Saved", msg)
+    cv2.waitKey(1200)
+    cv2.destroyAllWindows()
 
 
 def pick_color(cfg: dict) -> None:
@@ -168,6 +202,15 @@ def main() -> None:
         cfg = load_cfg()   # reload in case regions were saved
         pick_color(cfg)
     print("\nCalibration done.")
+    # Final popup so the user knows it's safe to close the app.
+    msg = np.zeros((80, 360, 3), dtype=np.uint8)
+    cv2.putText(msg, "Calibration done!", (10, 35),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (120, 255, 120), 2, cv2.LINE_AA)
+    cv2.putText(msg, "You can close this window.", (10, 62),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 220, 220), 1, cv2.LINE_AA)
+    cv2.imshow("Done", msg)
+    cv2.waitKey(1500)
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
