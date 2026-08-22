@@ -124,9 +124,75 @@ source .venv/bin/activate && python src/calibrate.py
 
 - **Regions:** a screenshot opens — drag a box around (a) the area where the
   "Shake!" prompt appears, (b) the reeling bar, (c) optionally the progress bar.
-  Press **Enter** to save each. Regions are written straight into `config.json`.
-- **Colors:** click on the fish marker, the control marker, and the white shake
-  prompt. The tool prints suggested HSV ranges to paste into `config.json`.
+  Press **Enter** to save each. A small popup confirms each save. Regions are
+  written straight into `config.json`.
+- **Colors:** for each named target (shake prompt, fish marker, control marker)
+  click a few pixels of that color on the screenshot, then press **Q**. The tool
+  writes the HSV range directly into `config.json` and shows a brief summary
+  popup. Press **ESC** to skip a target. Everything works without a console —
+  so it's safe to run as a double-clickable `.app`/`.exe` too.
+
+---
+
+## Hugging Face cloud brain (optional)
+
+The local vision engine is enough for the real-time stuff (cast/shake/reel), but
+**knowing whether a catch is good** is where a real model helps. We offload that
+one question to [Hugging Face](https://huggingface.co/) — it runs on *their*
+servers, so you don't need a good PC.
+
+### 1. Get a free token
+
+1. Create a free account at <https://huggingface.co/join>.
+2. Go to **Settings → Access Tokens** and create a **Read** token.
+3. Paste it into `config.json`:
+   ```json
+   "huggingface": {
+     "enabled": true,
+     "api_token": "hf_...your token...",
+     ...
+   }
+   ```
+   …or set the environment variable `HF_API_TOKEN=hf_...` (preferred — keeps
+   the token out of the config file).
+
+### 2. Configure what counts as "good"
+
+`config.json` → `huggingface.candidate_labels` is the list of descriptions the
+model scores the caught-fish popup against. Edit them to match the fish you
+care about, then list the ones you want to keep in `good_labels`:
+
+```json
+"candidate_labels": [
+  "a rare or legendary shiny fish",
+  "a common ordinary fish",
+  "junk trash or an old boot"
+],
+"good_labels": ["a rare or legendary shiny fish"],
+"min_confidence": 0.45
+```
+
+### 3. Tell it what to do
+
+`config.json` → `catch`:
+
+```json
+"catch": {
+  "region": { "x": 0.33, "y": 0.30, "w": 0.34, "h": 0.40 },
+  "favorite_key": "f",
+  "act_on_good": true,
+  "act_after_seconds": 0.4
+}
+```
+
+- `region` — where the caught-fish popup appears on your screen (fractions 0..1).
+- `favorite_key` — the key Fisch uses to favorite a fish (default `f`).
+- `act_on_good` — if `true`, the macro presses `favorite_key` on good catches.
+- `act_after_seconds` — how long to wait after the catch before screenshotting
+  (so the popup has time to fully appear).
+
+If HF is disabled or the call fails, the macro just keeps every catch — it never
+blocks fishing.
 
 ---
 
@@ -143,6 +209,14 @@ source .venv/bin/activate && python src/calibrate.py
 | `reel.hold_bias` | ≥0.5 = hold when centered (counteracts gravity); <0.5 = release. |
 | `reel.progress.enabled` | Turn on to end reeling when a green progress bar fills. |
 | `timings.*` | All the delays/timeouts, in seconds. |
+| `catch.region` | Where the caught-fish popup appears (for the HF brain). |
+| `catch.favorite_key` | Key to press on a good catch (Fisch's default: `f`). |
+| `catch.act_on_good` | Auto-press favorite key when HF says "good". |
+| `huggingface.enabled` | Turn on the cloud catch-grader. |
+| `huggingface.api_token` | Your HF token (or set `HF_API_TOKEN` env var). |
+| `huggingface.candidate_labels` | Descriptions the model scores the catch against. |
+| `huggingface.good_labels` | Which of those count as "keep this fish". |
+| `huggingface.min_confidence` | Minimum score (0..1) before we call it good. |
 
 **Reeling too far right?** Lower `hold_bias`. **Too far left?** Raise it.
 **Jittery?** Increase `deadzone_frac` a little.
@@ -162,7 +236,8 @@ run.command              # macOS one-click launcher (run from source)
 src/
   macro.py               # state machine + entry point (run this)
   vision.py              # local CV "AI": shake/reel/progress detection
-  input_controller.py    # cross-platform mouse control (Windows/macOS)
+  hf_client.py           # optional Hugging Face cloud brain (catch grading)
+  input_controller.py    # cross-platform mouse + keyboard control (Windows/macOS)
   calibrate.py           # interactive region + color calibration tool
   paths.py               # config/log path resolution (source & frozen builds)
 ```
@@ -179,3 +254,11 @@ src/
   re-pick the regions/colors for your resolution.
 - **Play windowed (not fullscreen)** and keep the fishing UI unobstructed for
   the most reliable detection.
+- **HF says "no API token" but I set one:** make sure the token is either in
+  `config.json` → `huggingface.api_token` **or** the `HF_API_TOKEN` environment
+  variable — not both empty. Tokens are never printed or logged.
+- **HF keeps returning errors / "keeping catch":** the free tier cold-starts
+  models (~10-30 s first call) and rate-limits bursts. The macro treats every
+  failure as "keep the catch" so fishing never stalls — if you see this
+  constantly, lower the frequency by raising `catch.act_after_seconds` or
+  temporarily setting `huggingface.enabled: false`.
